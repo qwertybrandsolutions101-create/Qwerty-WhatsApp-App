@@ -1,7 +1,7 @@
 name: Build Qwerty WhatsApp Android APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   build_android_apk:
