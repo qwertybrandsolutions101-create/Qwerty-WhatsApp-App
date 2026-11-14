@@ -12,7 +12,7 @@ That workspace uses the existing same-origin `whatsapp-api.php` adapter, Omni Wh
 
 ## Authentication
 
-On first launch the app opens the Qwerty Console sign-in. After a successful sign-in it automatically enters the Indian WhatsApp workspace. WebView cookies are retained so later launches can go straight to the workspace until the server session expires.
+The app uses a dedicated mobile-app access credential and opens the Indian WhatsApp workspace directly. It does not show the Qwerty Dashboard sign-in screen. The website dashboard keeps its existing authenticated session flow.
 
 ## Build
 

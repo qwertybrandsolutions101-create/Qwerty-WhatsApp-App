@@ -14,10 +14,10 @@ import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-we
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const ORIGIN = 'https://qwertybrandsolutions.com';
-const LOGIN_URL = `${ORIGIN}/dashboard/?console=1&source=qwerty-whatsapp-app`;
 const MESSENGER_URL = `${ORIGIN}/dashboard/messenger/?account=india&source=qwerty-whatsapp-app`;
+const MOBILE_APP_ACCESS = process.env.EXPO_PUBLIC_QWERTY_MOBILE_ACCESS ?? '';
 
-type ShellMessage = { type?: 'auth-required' | 'messenger-ready' };
+type ShellMessage = { type?: 'messenger-ready' };
 
 export default function App() {
   const browser = useRef<WebView>(null);
@@ -31,37 +31,25 @@ export default function App() {
       (function () {
         if (window.__qwertyWhatsAppAppBootstrap) return true;
         window.__qwertyWhatsAppAppBootstrap = true;
-        var messengerUrl = ${JSON.stringify(MESSENGER_URL)};
+        var mobileAccess = ${JSON.stringify(MOBILE_APP_ACCESS)};
         var send = function (type) {
           try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: type })); } catch (_) {}
         };
-        if (location.pathname.indexOf('/dashboard/messenger/') === 0) {
-          send('messenger-ready');
-          return true;
-        }
-        var checking = false;
-        var checkSession = async function () {
-          if (checking || location.pathname.indexOf('/dashboard/messenger/') === 0) return;
-          checking = true;
-          try {
-            var response = await fetch('/dashboard/auth.php?action=session', {
-              credentials: 'same-origin',
-              cache: 'no-store'
-            });
-            var data = response.ok ? await response.json() : {};
-            if (data && data.authenticated === true) {
-              location.replace(messengerUrl);
-              return;
-            }
-            send('auth-required');
-          } catch (_) {
-            send('auth-required');
-          } finally {
-            checking = false;
+        var nativeFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+          var requestUrl = typeof input === 'string' ? input : (input && input.url) || '';
+          var absoluteUrl;
+          try { absoluteUrl = new URL(requestUrl, location.href); } catch (_) { return nativeFetch(input, init); }
+          if (absoluteUrl.origin === location.origin && /\/dashboard\/whatsapp-api\.php$/i.test(absoluteUrl.pathname)) {
+            var next = Object.assign({}, init || {});
+            var headers = new Headers(next.headers || (typeof input !== 'string' && input.headers) || undefined);
+            headers.set('X-Qwerty-Mobile-App', mobileAccess);
+            next.headers = headers;
+            return nativeFetch(input, next);
           }
+          return nativeFetch(input, init);
         };
-        checkSession();
-        window.__qwertyWhatsAppSessionTimer = setInterval(checkSession, 900);
+        send('messenger-ready');
         true;
       })();
     `,
@@ -118,7 +106,7 @@ export default function App() {
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     try {
       const message = JSON.parse(event.nativeEvent.data) as ShellMessage;
-      if (message.type === 'auth-required' || message.type === 'messenger-ready') {
+      if (message.type === 'messenger-ready') {
         setShellReady(true);
       }
     } catch {

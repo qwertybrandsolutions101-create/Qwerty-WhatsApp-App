@@ -3,7 +3,7 @@
     "name": "Qwerty WhatsApp",
     "slug": "qwerty-whatsapp",
     "owner": "shivam958s-team",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/qwerty-whatsapp-icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.qwertybrandsolutions.whatsapp",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "supportsTablet": false,
       "infoPlist": {
         "NSCameraUsageDescription": "Qwerty WhatsApp uses the camera when you choose to attach a photo.",
@@ -25,7 +25,7 @@
     },
     "android": {
       "package": "com.qwertybrandsolutions.whatsapp",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.RECORD_AUDIO",
