@@ -36,11 +36,14 @@ export default function App() {
           try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: type })); } catch (_) {}
         };
         var nativeFetch = window.fetch.bind(window);
+        var isProtectedApi = function (requestUrl) {
+          var absoluteUrl;
+          try { absoluteUrl = new URL(requestUrl, location.href); } catch (_) { return false; }
+          return absoluteUrl.origin === location.origin && /\/dashboard\/whatsapp-api\.php$/i.test(absoluteUrl.pathname);
+        };
         window.fetch = function (input, init) {
           var requestUrl = typeof input === 'string' ? input : (input && input.url) || '';
-          var absoluteUrl;
-          try { absoluteUrl = new URL(requestUrl, location.href); } catch (_) { return nativeFetch(input, init); }
-          if (absoluteUrl.origin === location.origin && /\/dashboard\/whatsapp-api\.php$/i.test(absoluteUrl.pathname)) {
+          if (isProtectedApi(requestUrl)) {
             var next = Object.assign({}, init || {});
             var headers = new Headers(next.headers || (typeof input !== 'string' && input.headers) || undefined);
             headers.set('X-Qwerty-Mobile-App', mobileAccess);
@@ -48,6 +51,18 @@ export default function App() {
             return nativeFetch(input, next);
           }
           return nativeFetch(input, init);
+        };
+        var nativeOpen = XMLHttpRequest.prototype.open;
+        var nativeSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url) {
+          this.__qwertyProtectedApi = isProtectedApi(String(url || ''));
+          return nativeOpen.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function () {
+          if (this.__qwertyProtectedApi) {
+            try { this.setRequestHeader('X-Qwerty-Mobile-App', mobileAccess); } catch (_) {}
+          }
+          return nativeSend.apply(this, arguments);
         };
         send('messenger-ready');
         true;
@@ -121,7 +136,10 @@ export default function App() {
         <WebView
           key={reloadKey}
           ref={browser}
-          source={{ uri: MESSENGER_URL }}
+          source={{
+            uri: MESSENGER_URL,
+            headers: MOBILE_APP_ACCESS ? { 'X-Qwerty-Mobile-App': MOBILE_APP_ACCESS } : undefined,
+          }}
           style={styles.webview}
           cacheEnabled
           cacheMode="LOAD_DEFAULT"
