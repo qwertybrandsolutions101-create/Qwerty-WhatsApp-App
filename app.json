@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Qwerty WhatsApp",
+    "slug": "qwerty-whatsapp",
+    "owner": "shivam958s-team",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/qwerty-whatsapp-icon.png",
+    "scheme": "qwertywhatsapp",
+    "extra": {
+      "eas": {
+        "projectId": "41cd89d8-e694-420d-90c9-6764827b8b12"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.qwertybrandsolutions.whatsapp",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Qwerty WhatsApp uses the camera when you choose to attach a photo.",
+        "NSMicrophoneUsageDescription": "Qwerty WhatsApp uses the microphone only when you record a voice note.",
+        "NSLocationWhenInUseUsageDescription": "Qwerty WhatsApp uses your location only when you choose to share it."
+      }
+    },
+    "android": {
+      "package": "com.qwertybrandsolutions.whatsapp",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "softwareKeyboardLayoutMode": "resize",
+      "allowBackup": false
+    }
+  }
+}

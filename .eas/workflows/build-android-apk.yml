@@ -1,0 +1,11 @@
+name: Build Qwerty WhatsApp Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_android_apk:
+    type: build
+    params:
+      platform: android
+      profile: preview
