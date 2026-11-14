@@ -133,12 +133,12 @@ export default function App() {
         <WebView
           key={reloadKey}
           ref={browser}
-          source={{ uri: LOGIN_URL }}
+          source={{ uri: MESSENGER_URL }}
           style={styles.webview}
           cacheEnabled
           cacheMode="LOAD_DEFAULT"
           pullToRefreshEnabled
-          originWhitelist={['https://qwertybrandsolutions.com']}
+          originWhitelist={['https://qwertybrandsolutions.com', 'https://www.qwertybrandsolutions.com']}
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
@@ -148,12 +148,16 @@ export default function App() {
           mediaPlaybackRequiresUserAction={false}
           allowsInlineMediaPlayback
           geolocationEnabled
+          mixedContentMode="compatibility"
+          androidLayerType="hardware"
           allowsBackForwardNavigationGestures
+          injectedJavaScriptBeforeContentLoaded={sessionBootstrap}
           injectedJavaScript={sessionBootstrap}
           onMessage={handleMessage}
           onNavigationStateChange={handleNavigation}
           onShouldStartLoadWithRequest={handleRequest}
           onLoadEnd={() => setShellReady(true)}
+          onContentProcessDidTerminate={() => browser.current?.reload()}
           onError={() => setLoadError(true)}
           onHttpError={event => {
             if (event.nativeEvent.statusCode >= 500) setLoadError(true);
