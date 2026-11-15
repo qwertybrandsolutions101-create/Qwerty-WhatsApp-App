@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AppState,
   BackHandler,
@@ -10,14 +10,28 @@ import {
   Text,
   View,
 } from 'react-native';
-import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
+import WebView, { WebViewNavigation } from 'react-native-webview';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const ORIGIN = 'https://qwertybrandsolutions.com';
 const MESSENGER_URL = `${ORIGIN}/dashboard/messenger/?account=india&source=qwerty-whatsapp-app`;
-const MOBILE_APP_ACCESS = process.env.EXPO_PUBLIC_QWERTY_MOBILE_ACCESS ?? '';
 
-type ShellMessage = { type?: 'messenger-ready' };
+// The same website login is required here as in the Dashboard app.  We only
+// reveal its existing credential form for Android WebViews where the lamp
+// animation can otherwise hide it; no session or password is injected.
+const REVEAL_LOGIN_FORM = `
+  (function () {
+    function revealLogin() {
+      var root = document.querySelector('.lamp-login');
+      var pull = document.querySelector('#lamp-pull');
+      if (root && pull && !root.classList.contains('lamp-on')) pull.click();
+    }
+    [0, 250, 750, 1500].forEach(function (delay) {
+      window.setTimeout(revealLogin, delay);
+    });
+  })();
+  true;
+`;
 
 export default function App() {
   const browser = useRef<WebView>(null);
@@ -25,51 +39,6 @@ export default function App() {
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [shellReady, setShellReady] = useState(false);
-
-  const sessionBootstrap = useMemo(
-    () => `
-      (function () {
-        if (window.__qwertyWhatsAppAppBootstrap) return true;
-        window.__qwertyWhatsAppAppBootstrap = true;
-        var mobileAccess = ${JSON.stringify(MOBILE_APP_ACCESS)};
-        var send = function (type) {
-          try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: type })); } catch (_) {}
-        };
-        var nativeFetch = window.fetch.bind(window);
-        var isProtectedApi = function (requestUrl) {
-          var absoluteUrl;
-          try { absoluteUrl = new URL(requestUrl, location.href); } catch (_) { return false; }
-          return absoluteUrl.origin === location.origin && /\/dashboard\/whatsapp-api\.php$/i.test(absoluteUrl.pathname);
-        };
-        window.fetch = function (input, init) {
-          var requestUrl = typeof input === 'string' ? input : (input && input.url) || '';
-          if (isProtectedApi(requestUrl)) {
-            var next = Object.assign({}, init || {});
-            var headers = new Headers(next.headers || (typeof input !== 'string' && input.headers) || undefined);
-            headers.set('X-Qwerty-Mobile-App', mobileAccess);
-            next.headers = headers;
-            return nativeFetch(input, next);
-          }
-          return nativeFetch(input, init);
-        };
-        var nativeOpen = XMLHttpRequest.prototype.open;
-        var nativeSend = XMLHttpRequest.prototype.send;
-        XMLHttpRequest.prototype.open = function (method, url) {
-          this.__qwertyProtectedApi = isProtectedApi(String(url || ''));
-          return nativeOpen.apply(this, arguments);
-        };
-        XMLHttpRequest.prototype.send = function () {
-          if (this.__qwertyProtectedApi) {
-            try { this.setRequestHeader('X-Qwerty-Mobile-App', mobileAccess); } catch (_) {}
-          }
-          return nativeSend.apply(this, arguments);
-        };
-        send('messenger-ready');
-        true;
-      })();
-    `,
-    [],
-  );
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -118,17 +87,6 @@ export default function App() {
     if (state.url.includes('/dashboard/messenger/')) setShellReady(true);
   }, []);
 
-  const handleMessage = useCallback((event: WebViewMessageEvent) => {
-    try {
-      const message = JSON.parse(event.nativeEvent.data) as ShellMessage;
-      if (message.type === 'messenger-ready') {
-        setShellReady(true);
-      }
-    } catch {
-      // Ignore messages not owned by the native shell.
-    }
-  }, []);
-
   return (
     <SafeAreaProvider style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor="#f4f7f5" translucent={false} />
@@ -136,10 +94,7 @@ export default function App() {
         <WebView
           key={reloadKey}
           ref={browser}
-          source={{
-            uri: MESSENGER_URL,
-            headers: MOBILE_APP_ACCESS ? { 'X-Qwerty-Mobile-App': MOBILE_APP_ACCESS } : undefined,
-          }}
+          source={{ uri: MESSENGER_URL }}
           style={styles.webview}
           cacheEnabled
           cacheMode="LOAD_DEFAULT"
@@ -157,12 +112,12 @@ export default function App() {
           mixedContentMode="compatibility"
           androidLayerType="hardware"
           allowsBackForwardNavigationGestures
-          injectedJavaScriptBeforeContentLoaded={sessionBootstrap}
-          injectedJavaScript={sessionBootstrap}
-          onMessage={handleMessage}
           onNavigationStateChange={handleNavigation}
           onShouldStartLoadWithRequest={handleRequest}
-          onLoadEnd={() => setShellReady(true)}
+          onLoadEnd={() => {
+            browser.current?.injectJavaScript(REVEAL_LOGIN_FORM);
+            setShellReady(true);
+          }}
           onContentProcessDidTerminate={() => browser.current?.reload()}
           onError={() => setLoadError(true)}
           onHttpError={event => {
